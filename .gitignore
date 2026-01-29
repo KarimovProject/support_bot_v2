@@ -1,0 +1,15 @@
+# Virtual muhitlar (eng asosiysi shu)
+venv
+.venv/
+env/
+
+# Python kompilyatsiya fayllari (keraksiz)
+__pycache__/
+*.pyc
+
+# Maxfiy tokenlar fayli (Gitga ketib qolmasligi shart!)
+.env
+
+# Ma'lumotlar bazasi (Buni ham yuklamagan ma'qul)
+*.db
+support.db
