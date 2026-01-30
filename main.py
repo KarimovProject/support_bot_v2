@@ -10,8 +10,8 @@ from telegram.ext import (
     filters,
 )
 from telegram.error import Forbidden
-BOT_TOKEN = "8310591373:AAE-bRh3PCKVr2WdmKyV21_ogyvPZdQHOvA"
-ADMIN_GROUP_ID = -5053475212
+BOT_TOKEN = ""
+ADMIN_GROUP_ID = 
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
