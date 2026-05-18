@@ -10,9 +10,21 @@ from telegram.ext import (
     filters,
 )
 from telegram.error import Forbidden
-BOT_TOKEN = ""
-ADMIN_GROUP_ID = 
+import os
+from dotenv import load_dotenv
 
+# Tizimdagi yoki .env fayldagi maxfiy o'zgaruvchilarni yuklash
+load_dotenv()
+
+# Sirlarni xavfsiz tarzda chaqirib olish
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+GROUP_ID = os.getenv("GROUP_ID")
+
+# Kichik himoya: Agar token topilmasa, dastur xato berib to'xtaydi (bu xatoni erta topishga yordam beradi)
+if not BOT_TOKEN:
+    raise ValueError("BOT_TOKEN topilmadi! .env faylini yoki GitHub Secrets'ni tekshiring.")
+
+# ... Qolgan kodingiz shu yerdan davom etadi ...
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO

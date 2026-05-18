@@ -1,0 +1,27 @@
+name: Deploy Support Bot
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    # YANGI QADAM: GitHub Secrets'dan .env faylini serverda yaratish
+    - name: Create .env file
+      run: |
+        echo "BOT_TOKEN=${{ secrets.BOT_TOKEN }}" > .env
+        echo "GROUP_ID=${{ secrets.GROUP_ID }}" >> .env
+
+    - name: Deploy with Docker Compose
+      run: |
+        docker compose down
+        docker compose up -d --build
+        
+    - name: Clean up Docker
+      run: docker image prune -f
