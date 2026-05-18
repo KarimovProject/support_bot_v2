@@ -54,7 +54,7 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await add_user_to_db(user)
     msg = (
         f"Assalomu alaykum, {user.first_name}! 👋\n\n"
-        "Savolingizni shu yerga yozing. Adminlarimiz javob berishadi."
+        "Savolingizni shu yerga yozing. Adminlarimiz javob berishadi. CI/CD fayli tayyorlangan tayyor project!"
     )
     await update.message.reply_text(msg)
 
