@@ -5,3 +5,6 @@ services:
     restart: always
     env_file:
       - .env
+    volumes:
+      # Konteyner ichidagi support.db faylini, serverning o'sha papkasidagi support.db ga qattiq bog'laymiz
+      - ./support.db:/app/support.db
