@@ -13,3 +13,4 @@ __pycache__/
 # Ma'lumotlar bazasi (Buni ham yuklamagan ma'qul)
 *.db
 support.db
+.env
