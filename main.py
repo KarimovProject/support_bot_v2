@@ -24,6 +24,14 @@ GROUP_ID = os.getenv("GROUP_ID")
 if not BOT_TOKEN:
     raise ValueError("BOT_TOKEN topilmadi! .env faylini yoki GitHub Secrets'ni tekshiring.")
 
+if not GROUP_ID:
+    raise ValueError("GROUP_ID topilmadi! .env faylini tekshiring.")
+
+try:
+    ADMIN_GROUP_ID = int(GROUP_ID)
+except ValueError:
+    raise ValueError("GROUP_ID butun son bo'lishi kerak.")
+
 # ... Qolgan kodingiz shu yerdan davom etadi ...
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
