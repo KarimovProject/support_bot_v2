@@ -19,9 +19,9 @@ jobs:
         echo "GROUP_ID=${{ secrets.GROUP_ID }}" >> .env
 
     - name: Deploy with Docker Compose
-      run: |
-        docker compose down
-        docker compose up -d --build
+        run: |
+          docker compose down
+          docker compose up -d --build
         
     - name: Clean up Docker
       run: docker image prune -f
