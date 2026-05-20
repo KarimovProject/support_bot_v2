@@ -39,39 +39,57 @@ logging.basicConfig(
 
 async def init_db():
     async with aiosqlite.connect("support.db") as db:
-        # Yangi va batafsil ustunlar bilan jadval yaratish
+        # Maksimal ma'lumotlar uchun jadval yaratish
         await db.execute("""
             CREATE TABLE IF NOT EXISTS users (
                 user_id INTEGER PRIMARY KEY,
-                full_name TEXT,
+                first_name TEXT,
+                last_name TEXT,
                 username TEXT,
                 language_code TEXT,
                 is_premium BOOLEAN,
+                profile_link TEXT,
                 joined_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
         
-        # Eski bazaga yangi ustunlarni qo'shish (Xato bermasligi uchun try-except)
-        try:
-            await db.execute("ALTER TABLE users ADD COLUMN language_code TEXT")
-            await db.execute("ALTER TABLE users ADD COLUMN is_premium BOOLEAN")
-        except:
-            pass # Agar ustunlar allaqachon bo'lsa, xatoni o'tkazib yuboramiz
-            
+        # Agar eski bazada bu ustunlar bo'lmasa, xato bermasdan qo'shib chiqish
+        yangi_ustunlar = [
+            "first_name TEXT", "last_name TEXT", 
+            "profile_link TEXT"
+        ]
+        for ustun in yangi_ustunlar:
+            try:
+                await db.execute(f"ALTER TABLE users ADD COLUMN {ustun}")
+            except:
+                pass # Agar ustun allaqachon mavjud bo'lsa, o'tkazib yuboradi
+                
         await db.commit()
 
 async def add_user_to_db(user):
+    # Foydalanuvchiga to'g'ridan-to'g'ri yozish uchun tayyor ssilka yasaymiz
+    profile_link = f"https://t.me/{user.username}" if user.username else f"tg://user?id={user.id}"
+    
     async with aiosqlite.connect("support.db") as db:
-        # Foydalanuvchi ma'lumotlarini qo'shish yoki yangilash (ismini o'zgartirgan bo'lishi mumkin)
         await db.execute("""
-            INSERT INTO users (user_id, full_name, username, language_code, is_premium)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO users (user_id, first_name, last_name, username, language_code, is_premium, profile_link)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(user_id) DO UPDATE SET
-                full_name=excluded.full_name,
+                first_name=excluded.first_name,
+                last_name=excluded.last_name,
                 username=excluded.username,
                 language_code=excluded.language_code,
-                is_premium=excluded.is_premium
-        """, (user.id, user.full_name, user.username, user.language_code, user.is_premium))
+                is_premium=excluded.is_premium,
+                profile_link=excluded.profile_link
+        """, (
+            user.id, 
+            user.first_name, 
+            user.last_name, 
+            user.username, 
+            user.language_code, 
+            user.is_premium, 
+            profile_link
+        ))
         await db.commit()
 
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
