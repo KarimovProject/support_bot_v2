@@ -12,14 +12,17 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # YANGI QADAM: GitHub Secrets'dan .env faylini serverda yaratish
+      # GitHub Secrets'dan .env faylini serverda yaratish
       - name: Create .env file
         run: |
           echo "BOT_TOKEN=${{ secrets.BOT_TOKEN }}" > .env
           echo "GROUP_ID=${{ secrets.GROUP_ID }}" >> .env
 
+      # Baza papka bo'lib qolishining oldini olish va Docker'ni ko'tarish
       - name: Deploy with Docker Compose
         run: |
+          if [ -d "support.db" ]; then rm -rf support.db; fi
+          touch support.db
           docker compose down
           docker compose up -d --build
 
