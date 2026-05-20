@@ -1,6 +1,9 @@
 import logging
 import asyncio
 import aiosqlite
+import os
+import csv
+import io
 from telegram import Update
 from telegram.ext import (
     ApplicationBuilder,
@@ -10,17 +13,14 @@ from telegram.ext import (
     filters,
 )
 from telegram.error import Forbidden
-import os
 from dotenv import load_dotenv
 
 # Tizimdagi yoki .env fayldagi maxfiy o'zgaruvchilarni yuklash
 load_dotenv()
 
-# Sirlarni xavfsiz tarzda chaqirib olish
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 GROUP_ID = os.getenv("GROUP_ID")
 
-# Kichik himoya: Agar token topilmasa, dastur xato berib to'xtaydi (bu xatoni erta topishga yordam beradi)
 if not BOT_TOKEN:
     raise ValueError("BOT_TOKEN topilmadi! .env faylini yoki GitHub Secrets'ni tekshiring.")
 
@@ -32,29 +32,46 @@ try:
 except ValueError:
     raise ValueError("GROUP_ID butun son bo'lishi kerak.")
 
-# ... Qolgan kodingiz shu yerdan davom etadi ...
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO
 )
+
 async def init_db():
     async with aiosqlite.connect("support.db") as db:
+        # Yangi va batafsil ustunlar bilan jadval yaratish
         await db.execute("""
             CREATE TABLE IF NOT EXISTS users (
                 user_id INTEGER PRIMARY KEY,
                 full_name TEXT,
                 username TEXT,
+                language_code TEXT,
+                is_premium BOOLEAN,
                 joined_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
+        
+        # Eski bazaga yangi ustunlarni qo'shish (Xato bermasligi uchun try-except)
+        try:
+            await db.execute("ALTER TABLE users ADD COLUMN language_code TEXT")
+            await db.execute("ALTER TABLE users ADD COLUMN is_premium BOOLEAN")
+        except:
+            pass # Agar ustunlar allaqachon bo'lsa, xatoni o'tkazib yuboramiz
+            
         await db.commit()
 
 async def add_user_to_db(user):
     async with aiosqlite.connect("support.db") as db:
+        # Foydalanuvchi ma'lumotlarini qo'shish yoki yangilash (ismini o'zgartirgan bo'lishi mumkin)
         await db.execute("""
-            INSERT OR IGNORE INTO users (user_id, full_name, username)
-            VALUES (?, ?, ?)
-        """, (user.id, user.full_name, user.username))
+            INSERT INTO users (user_id, full_name, username, language_code, is_premium)
+            VALUES (?, ?, ?, ?, ?)
+            ON CONFLICT(user_id) DO UPDATE SET
+                full_name=excluded.full_name,
+                username=excluded.username,
+                language_code=excluded.language_code,
+                is_premium=excluded.is_premium
+        """, (user.id, user.full_name, user.username, user.language_code, user.is_premium))
         await db.commit()
 
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -104,6 +121,7 @@ async def reply_to_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
                  user_id = original_msg.forward_origin.sender_user.id
         elif hasattr(original_msg, 'forward_from') and original_msg.forward_from:
             user_id = original_msg.forward_from.id
+            
     if user_id:
         try:
             await update.message.copy(chat_id=user_id)
@@ -120,6 +138,41 @@ async def reply_to_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
             parse_mode="Markdown"
         )
 
+# YANGI QO'SHILDI: Adminlar uchun hisobot buyrug'i
+async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    # Faqat admin guruhida ishlashiga tekshiruv
+    if update.effective_chat.id != ADMIN_GROUP_ID:
+        return
+
+    async with aiosqlite.connect("support.db") as db:
+        async with db.execute("SELECT * FROM users") as cursor:
+            users = await cursor.fetchall()
+            columns = [description[0] for description in cursor.description]
+
+    if not users:
+        await update.message.reply_text("Bazada hali xabar yozgan foydalanuvchilar yo'q.")
+        return
+
+    # CSV fayl (Excel) yaratish jarayoni
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(columns) # Ustunlar nomini yozish
+    writer.writerows(users)  # Ma'lumotlarni yozish
+    
+    # Uni bytelarga o'girib yuborishga tayyorlash
+    bio = io.BytesIO(output.getvalue().encode('utf-8-sig'))
+    bio.name = 'foydalanuvchilar_hisoboti.csv'
+
+    await update.message.reply_document(
+        document=bio,
+        caption=(
+            f"📊 **Bot Statistikasi:**\n\n"
+            f"👥 Umumiy foydalanuvchilar: {len(users)} ta.\n\n"
+            "Batafsil ma'lumotlarni biriktirilgan Excel (CSV) fayl orqali ko'rishingiz mumkin."
+        ),
+        parse_mode="Markdown"
+    )
+
 if __name__ == '__main__':
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
@@ -128,6 +181,8 @@ if __name__ == '__main__':
     application = ApplicationBuilder().token(BOT_TOKEN).build()
 
     application.add_handler(CommandHandler("start", start_command))
+    application.add_handler(CommandHandler("stats", stats_command)) # Stats buyrug'i qo'shildi
+    
     application.add_handler(MessageHandler(
         filters.ChatType.GROUPS & filters.REPLY, 
         reply_to_user
